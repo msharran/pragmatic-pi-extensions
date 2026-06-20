@@ -20,7 +20,7 @@ pi -e git:github.com/msharran/pragmatic-pi-extensions
 
 ### 1. `sessions.ts`
 
-Browse recent Pi sessions, insert `@S-...` references, and resolve them with a `read_session` tool.
+Browse recent Pi sessions, insert `@@` references, and resolve them with a `read_session` tool.
 
 **Recent build context**
 - Added in the last week with session mention support for browsing recent sessions, inserting `@S` references, and forcing referenced sessions to be read before answering.
@@ -28,7 +28,7 @@ Browse recent Pi sessions, insert `@S-...` references, and resolve them with a `
 
 **What it does**
 - `/mention` command to insert a session reference
-- `@` picker UI in the TUI editor
+- `@@` picker UI in the TUI editor
 - `read_session` tool to summarize a referenced session via a separate Pi process
 - input transform that reminds the agent to resolve `@S-...` references first
 
