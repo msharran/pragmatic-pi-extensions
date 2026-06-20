@@ -2,6 +2,14 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { complete, getModel, type Message } from "@earendil-works/pi-ai";
 import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import {
+  MAX_STDERR_CHARS,
+  MAX_STDOUT_CHARS,
+  buildSubagentPrompt,
+  loadSubagentConfig,
+  runConfiguredSubagent,
+  type SubagentConfig,
+} from "./lib/pi-subagent-runner";
 
 type TextBlock = { type?: string; text?: string };
 type MessageLike = { role?: string; content?: unknown };
@@ -15,6 +23,7 @@ const DEFAULT_CONFIG = {
   provider: "openai-codex",
   model: "gpt-5.5",
   thinking: "off",
+  subagent: undefined,
 } as const;
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
 
@@ -23,6 +32,7 @@ type SmartTitlebarConfig = {
   provider: string;
   model: string;
   thinking: ThinkingLevel;
+  subagent?: string;
 };
 
 type RawSmartTitlebarConfig = {
@@ -31,6 +41,8 @@ type RawSmartTitlebarConfig = {
   modelId?: unknown;
   thinking?: unknown;
   thinkingLevel?: unknown;
+  subagent?: unknown;
+  subagentName?: unknown;
 };
 
 const SYSTEM_PROMPT = [
@@ -124,11 +136,16 @@ function loadConfig(): SmartTitlebarConfig {
     provider: asTrimmedString(parsed.provider) ?? DEFAULT_CONFIG.provider,
     model: asTrimmedString(parsed.model) ?? asTrimmedString(parsed.modelId) ?? DEFAULT_CONFIG.model,
     thinking: parseThinking(parsed.thinking ?? parsed.thinkingLevel),
+    subagent: asTrimmedString(parsed.subagent) ?? asTrimmedString(parsed.subagentName) ?? DEFAULT_CONFIG.subagent,
   };
 }
 
-async function generateTitle(ctx: ExtensionContext, userPrompt: string, assistantResult: string): Promise<string | undefined> {
-  const config = loadConfig();
+async function generateTitleWithModel(
+  ctx: ExtensionContext,
+  config: SmartTitlebarConfig,
+  userPrompt: string,
+  assistantResult: string,
+): Promise<string | undefined> {
   const model = getModel(config.provider, config.model);
   if (!model) return undefined;
 
@@ -175,6 +192,76 @@ async function generateTitle(ctx: ExtensionContext, userPrompt: string, assistan
     .join("\n");
 
   return cleanTitle(rawTitle) || undefined;
+}
+
+async function generateTitleWithSubagent(
+  ctx: ExtensionContext,
+  agent: SubagentConfig,
+  userPrompt: string,
+  assistantResult: string,
+): Promise<string | undefined> {
+  const fullPrompt = buildSubagentPrompt(
+    agent,
+    [
+      "Create a short title for this terminal thread.",
+      "Return only the title text.",
+      "Follow these rules exactly:",
+      "- 3 to 7 words",
+      "- Title Case or concise sentence case",
+      "- No quotes, emoji, punctuation, prefixes, or explanations",
+      "- Prefer the user's actual task over generic words like Help or Chat",
+      "",
+      "<user_prompt>",
+      clip(userPrompt),
+      "</user_prompt>",
+      "",
+      "<assistant_result>",
+      clip(assistantResult),
+      "</assistant_result>",
+    ].join("\n"),
+  );
+
+  const spawned = await runConfiguredSubagent(agent, fullPrompt, {
+    cwd: ctx.cwd,
+    signal: ctx.signal,
+  });
+  if (spawned.timedOut || spawned.outputExceeded || spawned.code !== 0) {
+    if (spawned.timedOut) {
+      console.warn(`smart-titlebar: subagent @#${agent.name} timed out`);
+    } else if (spawned.outputExceeded) {
+      const limit = spawned.outputExceeded === "stdout" ? MAX_STDOUT_CHARS : MAX_STDERR_CHARS;
+      console.warn(`smart-titlebar: subagent @#${agent.name} ${spawned.outputExceeded} exceeded ${limit} chars`);
+    } else {
+      console.warn(
+        `smart-titlebar: subagent @#${agent.name} failed`,
+        spawned.stderr.trim() || `exit code ${spawned.code}`,
+      );
+    }
+    return undefined;
+  }
+
+  return cleanTitle(spawned.stdout) || undefined;
+}
+
+async function generateTitle(ctx: ExtensionContext, userPrompt: string, assistantResult: string): Promise<string | undefined> {
+  const config = loadConfig();
+  if (config.subagent) {
+    try {
+      const { config: subagentConfig } = loadSubagentConfig({ force: true });
+      const agent = subagentConfig.get(config.subagent.replace(/^@#?/, "").trim());
+      if (agent) {
+        const title = await generateTitleWithSubagent(ctx, agent, userPrompt, assistantResult);
+        if (title) return title;
+        console.warn(`smart-titlebar: falling back to direct model title generation after @#${agent.name}`);
+      } else {
+        console.warn(`smart-titlebar: unknown subagent ${config.subagent}`);
+      }
+    } catch (error) {
+      console.warn("smart-titlebar: failed to load subagent config", error);
+    }
+  }
+
+  return generateTitleWithModel(ctx, config, userPrompt, assistantResult);
 }
 
 export default function smartTitlebarExtension(pi: ExtensionAPI) {
@@ -255,6 +342,7 @@ export default function smartTitlebarExtension(pi: ExtensionAPI) {
 
     titleInFlight = true;
     try {
+      if (ctx.hasUI) ctx.ui.setTitle(WORKING_TITLE);
       const title = await generateTitle(ctx, firstPrompt, assistantResult);
       if (!title || pi.getSessionName()) return;
 
