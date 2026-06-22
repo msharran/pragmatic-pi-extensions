@@ -20,6 +20,8 @@ pi -e git:github.com/msharran/pragmatic-pi-extensions
 
 ### 1. `sessions.ts`
 
+https://github.com/user-attachments/assets/c3f7dc9a-01f3-4db1-867b-5b02d16f2e91
+
 Browse recent Pi sessions, insert `@@` references, and resolve them with a `read_session` tool.
 
 **Recent build context**
@@ -48,12 +50,14 @@ Browse recent Pi sessions, insert `@@` references, and resolve them with a `read
 
 See also: [`examples/sessions.json`](./examples/sessions.json)
 
-**Showcase**
-- Shared demo for [`extensions/sessions.ts`](./extensions/sessions.ts) + [`extensions/smart-titlebar.ts`](./extensions/smart-titlebar.ts): [`assets/showcase/session-mention-smart-titlebar-showcase.mp4`](./assets/showcase/session-mention-smart-titlebar-showcase.mp4)
 
 ---
 
 ### 2. `pi-as-subagent.ts`
+
+https://github.com/user-attachments/assets/c4015c51-8a52-4f0b-af49-45f15ee9170e
+
+https://github.com/user-attachments/assets/b6bd26ce-f37c-4f55-92bb-7a9f48f62aa1
 
 Adds configurable Pi subagents with `@#name` autocomplete and an `ask_pi_subagent` tool.
 
@@ -87,16 +91,13 @@ Adds configurable Pi subagents with `@#name` autocomplete and an `ask_pi_subagen
 
 See also: [`examples/pi-as-subagent.json`](./examples/pi-as-subagent.json)
 
-**Showcase**
-- [`extensions/pi-as-subagent.ts`](./extensions/pi-as-subagent.ts) demo video: [`assets/showcase/pi-as-subagent-showcase.mp4`](./assets/showcase/pi-as-subagent-showcase.mp4)
-- Discord showcase thread: <https://discord.com/channels/1456806362351669492/1518300622422806599>
-- Tweet: <https://x.com/msharran111/status/2068391625467031737?s=20>
-
-[![pi-as-subagent showcase](./assets/showcase/pi-as-subagent-showcase.png)](./assets/showcase/pi-as-subagent-showcase.mp4)
-
 ---
 
 ### 3. `smart-titlebar.ts`
+
+https://github.com/user-attachments/assets/c3f7dc9a-01f3-4db1-867b-5b02d16f2e91
+
+_NOTE: Shared demo with "session mentions". See title bar_
 
 Generates short session titles and animates the terminal title while Pi is working.
 
@@ -123,9 +124,6 @@ Generates short session titles and animates the terminal title while Pi is worki
 ```
 
 See also: [`examples/smart-titlebar.json`](./examples/smart-titlebar.json)
-
-**Showcase**
-- Shared demo for [`extensions/smart-titlebar.ts`](./extensions/smart-titlebar.ts) + [`extensions/sessions.ts`](./extensions/sessions.ts): [`assets/showcase/session-mention-smart-titlebar-showcase.mp4`](./assets/showcase/session-mention-smart-titlebar-showcase.mp4)
 
 ---
 
